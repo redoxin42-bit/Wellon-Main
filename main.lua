@@ -1,105 +1,164 @@
--- UnlockCode-01 | /unlock | S-01 Isolated Env
--- Target: Bizarre Lineage (Vellure Style UI)
+-- Wellon UnlockCode-01 | /unlock | S-01
+-- Style: Liquid Glass v2.1 (Bizarre Lineage)
+-- Авторская сборка (Handcrafted Logic)
 
 local Player = game:GetService("Players").LocalPlayer
 local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local VIM = game:GetService("VirtualInputManager")
 
--- Чистка
-if CoreGui:FindFirstChild("Vellure_Unlock") then CoreGui.Vellure_Unlock:Destroy() end
+-- Удаление старых сессий
+if CoreGui:FindFirstChild("Wellon_Liquid") then CoreGui.Wellon_Liquid:Destroy() end
 
 local Flags = {
-    AutoRaid = false, AutoFarm = false, SelectedRaid = "Death 13",
-    Skills = {R=false, Z=false, X=false, C=false, V=false, E=false},
-    Offset = Vector3.new(0, -13, 0)
+    AutoRaid = false, AutoAgain = false, AutoJoin = false,
+    SelectedRaid = "Death 13 Raid",
+    RaidOpen = false, SkillsOpen = false,
+    Skills = {R=false, Z=false, X=false, C=false, V=false, E=false}
 }
 
--- UI
+-- [ ГЕНЕРАЦИЯ ИНТЕРФЕЙСА ]
 local UI = Instance.new("ScreenGui", CoreGui)
-UI.Name = "Vellure_Unlock"
+UI.Name = "Wellon_Liquid"
 
--- [ ISLAND - СКРИН 4 ]
+-- Island (Switcher)
 local Island = Instance.new("TextButton", UI)
-Island.Size = UDim2.new(0, 100, 0, 25)
-Island.Position = UDim2.new(0.5, -50, 0, 0) -- Самый верх экрана
-Island.BackgroundColor3 = Color3.fromRGB(30, 25, 45)
-Island.Text = "Vellure CLOSE"
-Island.TextColor3 = Color3.new(1,1,1)
-Island.Font = Enum.Font.GothamBold
-Island.TextSize = 10
-Instance.new("UICorner", Island).CornerRadius = UDim.new(0, 4)
+Island.Name = "WellonTrigger"
+Island.Size = UDim2.new(0, 140, 0, 32)
+Island.Position = UDim2.new(0.5, -70, 0, 8)
+Island.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+Island.BackgroundTransparency = 0.4
+Island.Text = "Wellon Close"
+Island.TextColor3 = Color3.fromRGB(200, 180, 255)
+Island.Font = Enum.Font.Code
+Island.TextSize = 13
+local ICorn = Instance.new("UICorner", Island); ICorn.CornerRadius = UDim.new(0, 8)
+local IStroke = Instance.new("UIStroke", Island); IStroke.Color = Color3.fromRGB(100, 80, 200); IStroke.Transparency = 0.5
 
--- [ MAIN MENU - СКРИН 3 STYLE ]
+-- Main Glass Frame
 local Main = Instance.new("Frame", UI)
-Main.Size = UDim2.new(0, 500, 0, 320)
-Main.Position = UDim2.new(0.5, -250, 0.5, -160)
-Main.BackgroundColor3 = Color3.fromRGB(18, 15, 25)
-Main.BorderSizePixel = 0
+Main.Name = "Main"
+Main.Size = UDim2.new(0, 580, 0, 420)
+Main.Position = UDim2.new(0.5, -290, 0.5, -210)
+Main.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+Main.BackgroundTransparency = 0.25 -- Liquid Glass Effect
 Main.Visible = false
 Main.Active = true
 Main.Draggable = true
-Instance.new("UICorner", Main)
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
+local MStroke = Instance.new("UIStroke", Main); MStroke.Color = Color3.fromRGB(255, 255, 255); MStroke.Transparency = 0.85
 
--- Sidebar
-local Side = Instance.new("Frame", Main)
-Side.Size = UDim2.new(0, 50, 1, 0)
-Side.BackgroundColor3 = Color3.fromRGB(14, 12, 20)
+-- Контейнер с прокруткой
+local Scroll = Instance.new("ScrollingFrame", Main)
+Scroll.Size = UDim2.new(1, -20, 1, -20)
+Scroll.Position = UDim2.new(0, 10, 0, 10)
+Scroll.BackgroundTransparency = 1
+Scroll.CanvasSize = UDim2.new(0, 0, 2, 0)
+Scroll.ScrollBarThickness = 2
+local Layout = Instance.new("UIListLayout", Scroll); Layout.Padding = UDim.new(0, 12)
 
--- Content Area
-local Container = Instance.new("ScrollingFrame", Main)
-Container.Size = UDim2.new(1, -60, 1, -20)
-Container.Position = UDim2.new(0, 60, 0, 10)
-Container.BackgroundTransparency = 1
-Container.ScrollBarThickness = 0
-local Layout = Instance.new("UIListLayout", Container); Layout.Padding = UDim.new(0, 8)
+-- [ КОМПОНЕНТЫ: СТИЛЬ КОДЕРА ]
+local function NewSection(name, flagKey)
+    local btn = Instance.new("TextButton", Scroll)
+    btn.Size = UDim2.new(1, 0, 0, 40)
+    btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    btn.BackgroundTransparency = 0.95
+    btn.Text = "  [+] " .. name
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.TextXAlignment = "Left"
+    btn.Font = Enum.Font.Code
+    Instance.new("UICorner", btn)
+    
+    local panel = Instance.new("Frame", Scroll)
+    panel.Size = UDim2.new(1, 0, 0, 0)
+    panel.ClipsDescendants = true
+    panel.BackgroundTransparency = 1
+    local pLayout = Instance.new("UIListLayout", panel); pLayout.Padding = UDim.new(0, 5)
+    
+    btn.MouseButton1Click:Connect(function()
+        Flags[flagKey] = not Flags[flagKey]
+        local targetSize = Flags[flagKey] and UDim2.new(1, 0, 0, 280) or UDim2.new(1, 0, 0, 0)
+        if flagKey == "RaidOpen" then targetSize = Flags[flagKey] and UDim2.new(1, 0, 0, 320) or UDim2.new(1, 0, 0, 0) end
+        TweenService:Create(panel, TweenInfo.new(0.4, Enum.EasingStyle.Quart), {Size = targetSize}):Play()
+        btn.Text = Flags[flagKey] and "  [-] " .. name or "  [+] " .. name
+    end)
+    return panel
+end
 
--- [ FUNCTIONS ]
-local function AddToggle(name, flag)
-    local f = Instance.new("Frame", Container)
-    f.Size = UDim2.new(1, 0, 0, 30); f.BackgroundTransparency = 1
-    local t = Instance.new("TextLabel", f)
-    t.Size = UDim2.new(0.7, 0, 1, 0); t.Text = name; t.TextColor3 = Color3.new(0.6, 0.6, 0.6)
-    t.BackgroundTransparency = 1; t.TextXAlignment = "Left"
-    local b = Instance.new("TextButton", f)
-    b.Size = UDim2.new(0, 40, 0, 20); b.Position = UDim2.new(0.8, 0, 0.2, 0)
-    b.BackgroundColor3 = Color3.fromRGB(45, 40, 60); b.Text = ""
-    Instance.new("UICorner", b)
-    b.MouseButton1Click:Connect(function()
-        Flags[flag] = not Flags[flag]
-        b.BackgroundColor3 = Flags[flag] and Color3.fromRGB(140, 100, 255) or Color3.fromRGB(45, 40, 60)
+local function CreateToggle(name, parent, cb)
+    local t = Instance.new("TextButton", parent)
+    t.Size = UDim2.new(1, -10, 0, 35)
+    t.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    t.BackgroundTransparency = 0.98
+    t.Text = "  " .. name .. " : OFF"
+    t.TextColor3 = Color3.fromRGB(180, 180, 180)
+    t.TextXAlignment = "Left"
+    t.Font = Enum.Font.Code
+    Instance.new("UICorner", t)
+    
+    local active = false
+    t.MouseButton1Click:Connect(function()
+        active = not active
+        t.Text = "  " .. name .. (active and " : ON" or " : OFF")
+        t.TextColor3 = active and Color3.fromRGB(150, 100, 255) or Color3.fromRGB(180, 180, 180)
+        cb(active)
     end)
 end
 
--- Наполнение (Automation / Skills)
-AddToggle("Auto Raid (Underground)", "AutoRaid")
-AddToggle("Auto Farm Mobs", "AutoFarm")
-for _, k in pairs({"R","Z","X","C","V","E"}) do
-    AddToggle("Auto Skill ["..k.."]", "Skill"..k)
+-- [ РАЗДЕЛ РЕЙДОВ ]
+local RaidPanel = NewSection("RAID AUTOMATION", "RaidOpen")
+CreateToggle("Auto Raid", RaidPanel, function(v) Flags.AutoRaid = v end)
+CreateToggle("Auto Again", RaidPanel, function(v) Flags.AutoAgain = v end)
+CreateToggle("Auto Join", RaidPanel, function(v) Flags.AutoJoin = v end)
+
+local Raids = {"Muhammad Avidol Raid", "Person Raid", "Death 13 Raid", "Jotaro Raid", "Dio raid", "Dio Tvoh Raid"}
+for _, rName in pairs(Raids) do
+    local rb = Instance.new("TextButton", RaidPanel)
+    rb.Size = UDim2.new(1, -20, 0, 30)
+    rb.BackgroundTransparency = 1
+    rb.Text = "  > Select: " .. rName
+    rb.TextColor3 = Color3.new(0.7, 0.7, 0.7)
+    rb.Font = Enum.Font.Code
+    rb.TextXAlignment = "Left"
+    rb.MouseButton1Click:Connect(function()
+        Flags.SelectedRaid = rName
+        print("Target set to: "..rName)
+    end)
 end
 
--- Logic Opening
-Island.MouseButton1Click:Connect(function() Main.Visible = true Island.Visible = false end)
-local Close = Instance.new("TextButton", Main)
-Close.Size = UDim2.new(0, 60, 0, 20); Close.Position = UDim2.new(0.44, 0, 0, -25)
-Close.Text = "CLOSE"; Close.MouseButton1Click:Connect(function() Main.Visible = false Island.Visible = true end)
+-- [ РАЗДЕЛ SKILLS ]
+local SkillPanel = NewSection("AUTO SKILLS", "SkillsOpen")
+for _, k in pairs({"R","Z","X","C","V","E"}) do
+    CreateToggle("Use Skill ["..k.."]", SkillPanel, function(v) Flags.Skills[k] = v end)
+end
 
--- [ WORKER LOOP ]
+-- [ ЛОГИКА ОСТРОВА ]
+Island.MouseButton1Click:Connect(function()
+    Main.Visible = not Main.Visible
+    Island.Text = Main.Visible and "Wellon Open" or "Wellon Close"
+end)
+
+-- [ ИСПОЛНИТЕЛЬНЫЙ ЯДРО ]
 RunService.Stepped:Connect(function()
     if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then return end
     local HRP = Player.Character.HumanoidRootPart
 
     if Flags.AutoRaid then
-        for _, e in pairs(workspace:GetDescendants()) do
-            if e:IsA("Model") and e:FindFirstChild("Humanoid") and e.Humanoid.Health > 0 and e ~= Player.Character then
-                HRP.CFrame = e.HumanoidRootPart.CFrame * CFrame.new(Flags.Offset)
-                break
-            end
+        -- Проверка: Мы в лобби или на рейде?
+        local Boss = workspace.Entities:FindFirstChild(Flags.SelectedRaid) or workspace.Entities:FindFirstChildWhichIsA("Model")
+        
+        if Boss then
+            -- МЫ НА РЕЙДЕ: Уходим под карту
+            HRP.CFrame = Boss.HumanoidRootPart.CFrame * CFrame.new(0, -14, 0)
+        else
+            -- МЫ В ЛОББИ: ТП к NPC рейда
+            local NPC = workspace.NPCs:FindFirstChild("Raid Master") -- Название NPC уточнить
+            if NPC then HRP.CFrame = NPC.HumanoidRootPart.CFrame end
         end
     end
 
-    -- Skill Spam
-    for k, _ in pairs(Flags.Skills) do
-        if Flags["Skill"..k] then VIM:SendKeyEvent(true, Enum.KeyCode[k], false, game) end
+    for k, v in pairs(Flags.Skills) do
+        if v then VIM:SendKeyEvent(true, Enum.KeyCode[k], false, game) end
     end
 end)
