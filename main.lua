@@ -1,171 +1,146 @@
--- UnlockCode-01 | /unlock | S-01 Isolated Environment
--- Target: Bizarre Lineage | Full Script
+-- UnlockCode-01 | /unlock | S-01
+-- Full Bizarre Lineage Script: Raids (Boss + NPC), Auto Farm, Island UI
 
 local Player = game:GetService("Players").LocalPlayer
 local CoreGui = game:GetService("CoreGui")
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
+local VirtualInput = game:GetService("VirtualInputManager")
 
--- Очистка старых сессий
+-- Cleanup
 if CoreGui:FindFirstChild("BizarreLineage_Unlock_S01") then
     CoreGui:FindFirstChild("BizarreLineage_Unlock_S01"):Destroy()
 end
 
--- Переменные состояний
 local Flags = {
     AutoRaid = false,
     AutoFarm = false,
-    AutoSkills = false,
-    AutoQuest = false,
-    ActiveSkills = {},
     SelectedRaid = "Death 13",
-    UOffset = Vector3.new(0, -14, 0) -- Смещение под карту
+    UOffset = Vector3.new(0, -14, 0),
+    Keys = {R = false, Z = false, X = false, C = false, V = false, E = false}
 }
 
--- [ GUI INITIALIZATION ]
-local MainUI = Instance.new("ScreenGui")
+-- [ UI BUILDER ]
+local MainUI = Instance.new("ScreenGui", CoreGui)
 MainUI.Name = "BizarreLineage_Unlock_S01"
-MainUI.Parent = CoreGui
 
--- [ ISLAND TRIGGER ]
-local Island = Instance.new("TextButton")
-Island.Name = "Island"
-Island.Size = UDim2.new(0, 150, 0, 35)
-Island.Position = UDim2.new(0.5, -75, 0, 15)
-Island.BackgroundColor3 = Color3.fromRGB(15, 0, 30)
-Island.Text = "UnlockCode-01 ~"
+-- Island (Top)
+local Island = Instance.new("TextButton", MainUI)
+Island.Size = UDim2.new(0, 140, 0, 35)
+Island.Position = UDim2.new(0.5, -70, 0, 10)
+Island.BackgroundColor3 = Color3.fromRGB(20, 0, 40)
+Island.Text = "UnlockCode-01"
 Island.TextColor3 = Color3.fromRGB(180, 100, 255)
-Island.Font = Enum.Font.GothamBold
-Island.TextSize = 14
-Island.Parent = MainUI
-Instance.new("UICorner", Island).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", Island)
 
--- [ MAIN FRAME ]
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 600, 0, 400)
-MainFrame.Position = UDim2.new(0.5, -300, 0.5, -200)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 0, 35)
+-- Main Frame
+local MainFrame = Instance.new("Frame", MainUI)
+MainFrame.Size = UDim2.new(0, 550, 0, 380)
+MainFrame.Position = UDim2.new(0.5, -275, 0.5, -190)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 0, 45)
 MainFrame.Visible = false
 MainFrame.Active = true
 MainFrame.Draggable = true
-MainFrame.Parent = MainUI
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 6)
+Instance.new("UICorner", MainFrame)
 
--- Close Button (Top Header)
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(1, 0, 0, 30)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(30, 0, 55)
-CloseBtn.Text = "▲ CLICK TO HIDE MENU ▲"
-CloseBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-CloseBtn.Font = Enum.Font.Gotham
-CloseBtn.Parent = MainFrame
+-- Close Trigger (Top of Menu)
+local CloseBar = Instance.new("TextButton", MainFrame)
+CloseBar.Size = UDim2.new(1, 0, 0, 30)
+CloseBar.BackgroundColor3 = Color3.fromRGB(35, 0, 65)
+CloseBar.Text = "▲ CLICK TO HIDE ▲"
+CloseBar.TextColor3 = Color3.new(0.8, 0.8, 0.8)
 
--- Sidebar & Pages
-local Sidebar = Instance.new("Frame")
-Sidebar.Size = UDim2.new(0, 160, 1, -30)
+-- Tabs
+local Sidebar = Instance.new("Frame", MainFrame)
+Sidebar.Size = UDim2.new(0, 140, 1, -30)
 Sidebar.Position = UDim2.new(0, 0, 0, 30)
-Sidebar.BackgroundColor3 = Color3.fromRGB(10, 0, 20)
-Sidebar.Parent = MainFrame
+Sidebar.BackgroundColor3 = Color3.fromRGB(15, 0, 30)
 
-local PageCont = Instance.new("Frame")
-PageCont.Size = UDim2.new(1, -160, 1, -30)
-PageCont.Position = UDim2.new(0, 160, 0, 30)
-PageCont.BackgroundTransparency = 1
-PageCont.Parent = MainFrame
+local Content = Instance.new("Frame", MainFrame)
+Content.Size = UDim2.new(1, -140, 1, -30)
+Content.Position = UDim2.new(0, 140, 0, 30)
+Content.BackgroundTransparency = 1
 
-local function NewPage()
-    local f = Instance.new("ScrollingFrame")
-    f.Size = UDim2.new(1, -20, 1, -20)
-    f.Position = UDim2.new(0, 10, 0, 10)
-    f.BackgroundTransparency = 1
-    f.ScrollBarThickness = 0
-    f.Visible = false
-    f.Parent = PageCont
-    local list = Instance.new("UIListLayout", f)
-    list.Padding = UDim.new(0, 8)
-    return f
+local function CreateList(parent)
+    local sc = Instance.new("ScrollingFrame", parent)
+    sc.Size = UDim2.new(1, -10, 1, -10)
+    sc.Position = UDim2.new(0, 5, 0, 5)
+    sc.BackgroundTransparency = 1
+    sc.ScrollBarThickness = 2
+    local l = Instance.new("UIListLayout", sc)
+    l.Padding = UDim.new(0, 5)
+    return sc
 end
 
-local Home = NewPage() Home.Visible = true
-local Farm = NewPage()
+local HomeList = CreateList(Content)
+local FarmList = CreateList(Content)
+FarmList.Visible = false
 
--- [ HELPERS ]
-local function CreateButton(text, parent, callback)
-    local b = Instance.new("TextButton")
-    b.Size = UDim2.new(1, 0, 0, 40)
-    b.BackgroundColor3 = Color3.fromRGB(40, 0, 75)
-    b.Text = text
-    b.TextColor3 = Color3.new(1, 1, 1)
-    b.Font = Enum.Font.Gotham
-    b.Parent = parent
-    b.MouseButton1Click:Connect(callback)
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
-end
-
-local function CreateToggle(text, parent, flagKey)
-    local b = Instance.new("TextButton")
-    b.Size = UDim2.new(1, 0, 0, 40)
-    b.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    b.Text = text .. ": OFF"
-    b.Parent = parent
-    b.MouseButton1Click:Connect(function()
-        Flags[flagKey] = not Flags[flagKey]
-        b.Text = text .. (Flags[flagKey] and ": ON" or ": OFF")
-        b.BackgroundColor3 = Flags[flagKey] and Color3.fromRGB(80, 0, 150) or Color3.fromRGB(50, 50, 50)
-    end)
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
-end
-
--- [ CONTENT: HOME ]
-CreateToggle("Auto Raid", Home, "AutoRaid")
-CreateToggle("Auto Join Raid", Home, "AutoJoin")
-
-local RaidList = {"Death 13", "Dio", "TVOH", "Kira Yoshikage", "Jotaro"}
-for _, r in pairs(RaidList) do
-    CreateButton("Select: " .. r, Home, function() 
-        Flags.SelectedRaid = r
-        print("S-01: Target set to " .. r)
-    end)
-end
-
--- [ CONTENT: FARM ]
-CreateToggle("Auto Farm Mobs", Farm, "AutoFarm")
-CreateToggle("Auto Quest NPC", Farm, "AutoQuest")
-CreateButton("Prestige Check", Farm, function() print("Checking Prestige Requirements...") end)
-
-local Keys = {"R", "Z", "X", "C", "V", "E"}
-for _, k in pairs(Keys) do
-    CreateToggle("Auto Skill ["..k.."]", Farm, k)
-end
-
--- [ NAVIGATION ]
-CreateButton("HOME (Raids)", Sidebar, function() Home.Visible = true Farm.Visible = false end)
-CreateButton("FARM (Skills)", Sidebar, function() Home.Visible = false Farm.Visible = true end)
-
--- [ LOGIC: TELEPORT & COMBAT ]
+-- UI Logic
 Island.MouseButton1Click:Connect(function() MainFrame.Visible = true Island.Visible = false end)
-CloseBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false Island.Visible = true end)
+CloseBar.MouseButton1Click:Connect(function() MainFrame.Visible = false Island.Visible = true end)
 
+-- [ FUNCTIONS ]
+local function Toggle(txt, parent, cb)
+    local b = Instance.new("TextButton", parent)
+    b.Size = UDim2.new(1, 0, 0, 35)
+    b.BackgroundColor3 = Color3.fromRGB(45, 0, 85)
+    b.Text = txt .. ": OFF"
+    b.TextColor3 = Color3.new(1, 1, 1)
+    local state = false
+    b.MouseButton1Click:Connect(function()
+        state = not state
+        b.Text = txt .. (state and ": ON" or ": OFF")
+        b.BackgroundColor3 = state and Color3.fromRGB(100, 0, 200) or Color3.fromRGB(45, 0, 85)
+        cb(state)
+    end)
+end
+
+-- Home Content
+Toggle("Auto Raid (Boss + Mobs)", HomeList, function(v) Flags.AutoRaid = v end)
+for _, r in pairs({"Death 13", "Dio", "TWOH", "Kira", "Jotaro"}) do
+    local b = Instance.new("TextButton", HomeList)
+    b.Size = UDim2.new(1, 0, 0, 30)
+    b.Text = "Target: " .. r
+    b.MouseButton1Click:Connect(function() Flags.SelectedRaid = r end)
+end
+
+-- Farm Content
+Toggle("Auto Farm (TP NPC/Mobs)", FarmList, function(v) Flags.AutoFarm = v end)
+for k, _ in pairs(Flags.Keys) do
+    Toggle("Auto Skill ["..k.."]", FarmList, function(v) Flags.Keys[k] = v end)
+end
+
+-- Sidebar Nav
+local b1 = Instance.new("TextButton", Sidebar)
+b1.Size = UDim2.new(1, 0, 0, 40)
+b1.Text = "HOME (RAIDS)"
+b1.MouseButton1Click:Connect(function() HomeList.Visible = true FarmList.Visible = false end)
+
+local b2 = Instance.new("TextButton", Sidebar)
+b2.Size = UDim2.new(1, 0, 0, 40)
+b2.Position = UDim2.new(0, 0, 0, 45)
+b2.Text = "FARM (EYE)"
+b2.MouseButton1Click:Connect(function() HomeList.Visible = false FarmList.Visible = true end)
+
+-- [ MASTER LOOP ]
 task.spawn(function()
     while task.wait() do
         local char = Player.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         
         if hrp then
-            -- Logic for AutoRaid (Underground)
+            -- Универсальный Raid Killer (убивает всё, что движется в рейде)
             if Flags.AutoRaid then
                 for _, ent in pairs(workspace.Entities:GetChildren()) do
-                    if ent:FindFirstChild("Humanoid") and ent.Humanoid.Health > 0 and ent.Name:find(Flags.SelectedRaid) then
+                    if ent:FindFirstChild("Humanoid") and ent.Humanoid.Health > 0 then
+                        -- Приоритет боссу, но бьет всех NPC рядом
                         hrp.CFrame = ent.HumanoidRootPart.CFrame * CFrame.new(Flags.UOffset)
-                        -- Trigger Attack Remote (Example)
-                        -- game:GetService("ReplicatedStorage").Remotes.Punch:FireServer()
+                        -- Trigger Attack (Remote)
                     end
                 end
             end
             
-            -- Logic for AutoFarm (NPC TP)
+            -- Auto Farm NPC/Mobs
             if Flags.AutoFarm then
-                -- Поиск ближайшего моба и ТП под него
                 for _, mob in pairs(workspace.Mobs:GetChildren()) do
                     if mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
                         hrp.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(Flags.UOffset)
@@ -173,12 +148,12 @@ task.spawn(function()
                     end
                 end
             end
-            
-            -- Auto Skills
-            for _, k in pairs(Keys) do
-                if Flags[k] then
-                    game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode[k], false, game)
-                    task.wait(0.1)
+
+            -- Skills
+            for k, active in pairs(Flags.Keys) do
+                if active then
+                    VirtualInput:SendKeyEvent(true, Enum.KeyCode[k], false, game)
+                    task.wait(0.05)
                 end
             end
         end
